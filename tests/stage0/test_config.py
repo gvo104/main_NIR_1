@@ -23,8 +23,9 @@ def _write_settings(path, *, llm=None, runtime=None):
     llm_values = {
         "model": '"qwen3.8-27b"',
         "smoke_max_tokens": "4096",
-        "aide_max_tokens": "12288",
+        "aide_max_tokens": "32768",
         "temperature": "0.7",
+        "reasoning_effort": '"low"',
     }
     runtime_values = {
         "request_timeout": "300",
@@ -63,8 +64,9 @@ def test_loads_secrets_and_non_secret_settings(tmp_path):
     assert config.server_address == "https://llm.example.test/v1"
     assert config.llm_model == "qwen3.8-27b"
     assert config.max_tokens == 4096
-    assert config.aide_max_tokens == 12288
+    assert config.aide_max_tokens == 32768
     assert config.temperature == 0.7
+    assert config.reasoning_effort == "low"
     assert config.request_timeout == 300
     assert config.executor_image == "nir-stage0-executor:latest"
     assert config.redacted_dict()["lite_llm_token"] == "***"
@@ -124,6 +126,7 @@ def test_rejects_invalid_server_address(tmp_path):
         ("llm", "smoke_max_tokens", "0", "positive"),
         ("llm", "aide_max_tokens", "0", "positive"),
         ("llm", "temperature", "2.1", "between 0 and 2"),
+        ("llm", "reasoning_effort", '"unsupported"', "must be one of"),
         ("runtime", "request_timeout", "0", "positive"),
         ("runtime", "executor_image", '""', "non-empty string"),
     ],
@@ -139,6 +142,20 @@ def test_rejects_invalid_settings(tmp_path, section, key, value, message):
 
     with pytest.raises(ConfigError, match=message):
         load_llm_config(env_file, settings_file, environ={}, repo_root=tmp_path)
+
+
+def test_reasoning_can_be_disabled_with_none_effort(tmp_path):
+    env_file, settings_file = _config_files(tmp_path)
+    _write_settings(settings_file, llm={"reasoning_effort": '"none"'})
+
+    config = load_llm_config(
+        env_file,
+        settings_file,
+        environ={},
+        repo_root=tmp_path,
+    )
+
+    assert config.reasoning_effort == "none"
 
 
 def test_aide_environment_is_temporary(tmp_path, monkeypatch):

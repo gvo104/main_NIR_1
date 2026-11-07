@@ -68,3 +68,12 @@ def test_timeout_removes_container(tmp_path, image):
 
     assert result.exc_type == "TimeoutError"
     assert result.exc_info == {"timeout_seconds": 1}
+
+
+def test_lightgbm_native_runtime_is_available(tmp_path, image):
+    executor = DockerExecutor(tmp_path, image=image)
+
+    result = executor("import lightgbm; print(lightgbm.__version__)")
+
+    assert result.exc_type is None
+    assert "Traceback" not in "".join(result.term_out)

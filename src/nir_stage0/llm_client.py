@@ -26,6 +26,20 @@ TOOL_SCHEMA: dict[str, Any] = {
 }
 
 
+class ReasoningBudgetExhaustedError(ValueError):
+    """Raised when a reasoning model emits no final answer before the limit."""
+
+
+def _raise_if_reasoning_exhausted(response: Any) -> None:
+    choice = response.choices[0]
+    message = choice.message
+    reasoning = getattr(message, "reasoning_content", None)
+    if reasoning or choice.finish_reason == "length":
+        raise ReasoningBudgetExhaustedError(
+            "LLM exhausted its reasoning budget without returning final content"
+        )
+
+
 def create_openai_client(
     config: LLMConfig,
     *,
@@ -52,9 +66,11 @@ def run_chat_smoke(client: OpenAI, config: LLMConfig) -> str:
         ],
         max_tokens=config.max_tokens,
         temperature=config.temperature,
+        reasoning_effort=config.reasoning_effort,
     )
     content = response.choices[0].message.content
     if not content or not content.strip():
+        _raise_if_reasoning_exhausted(response)
         raise ValueError("LLM returned an empty chat completion")
     return content.strip()
 
@@ -72,9 +88,11 @@ def run_tool_smoke(client: OpenAI, config: LLMConfig) -> dict[str, str]:
         tool_choice={"type": "function", "function": {"name": TOOL_NAME}},
         max_tokens=config.max_tokens,
         temperature=config.temperature,
+        reasoning_effort=config.reasoning_effort,
     )
     calls = response.choices[0].message.tool_calls or []
     if len(calls) != 1 or calls[0].function.name != TOOL_NAME:
+        _raise_if_reasoning_exhausted(response)
         raise ValueError(f"expected exactly one {TOOL_NAME} tool call")
     arguments = json.loads(calls[0].function.arguments)
     if set(arguments) != {"answer"} or not isinstance(arguments["answer"], str):

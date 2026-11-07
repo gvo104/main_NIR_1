@@ -13,6 +13,7 @@ from nir_stage0.aide_policy import (
     SelectableParentAgent,
     ensure_aide_user_message,
 )
+from nir_stage0.llm_client import ReasoningBudgetExhaustedError
 
 
 def _cfg(*, num_drafts=1, debug_prob=0.0):
@@ -105,6 +106,20 @@ def test_compatibility_adapter_adds_user_message_and_restores_query(monkeypatch)
 
     assert calls[0][1]["user_message"] == USER_MESSAGE_FALLBACK
     assert aide.agent.query is original_query
+
+
+def test_compatibility_adapter_classifies_missing_final_content(monkeypatch):
+    def fake_query(*args, **kwargs):
+        del args, kwargs
+        raise ValueError("OpenAI returned no text")
+
+    monkeypatch.setattr(aide.agent, "query", fake_query)
+
+    with (
+        ensure_aide_user_message(),
+        pytest.raises(ReasoningBudgetExhaustedError, match="reasoning budget"),
+    ):
+        aide.agent.query(system_message="prompt", user_message=None)
 
 
 def test_two_mocked_steps_preserve_generation_feedback_and_parent_link(monkeypatch):

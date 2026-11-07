@@ -13,6 +13,7 @@ from urllib.parse import urlsplit, urlunsplit
 from dotenv import dotenv_values
 
 REQUIRED_ENV_KEYS = ("lite_llm_token", "server_address")
+REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
 
 
 class ConfigError(ValueError):
@@ -26,7 +27,8 @@ class LLMConfig:
     llm_model: str
     max_tokens: int
     temperature: float
-    aide_max_tokens: int = 12288
+    reasoning_effort: str = "low"
+    aide_max_tokens: int = 32768
     request_timeout: float = 300.0
     executor_image: str = "nir-stage0-executor:latest"
 
@@ -170,6 +172,10 @@ def load_llm_config(
     temperature = float(temperature_value)
     if not 0.0 <= temperature <= 2.0:
         raise ConfigError("llm.temperature must be between 0 and 2")
+    reasoning_effort = llm_settings.get("reasoning_effort")
+    if reasoning_effort not in REASONING_EFFORTS:
+        allowed = ", ".join(sorted(REASONING_EFFORTS))
+        raise ConfigError(f"llm.reasoning_effort must be one of: {allowed}")
 
     request_timeout = _positive_float(
         runtime_settings.get("request_timeout"), "runtime.request_timeout"
@@ -184,6 +190,7 @@ def load_llm_config(
         llm_model=model.strip(),
         max_tokens=max_tokens,
         temperature=temperature,
+        reasoning_effort=reasoning_effort,
         aide_max_tokens=aide_max_tokens,
         request_timeout=request_timeout,
         executor_image=executor_image.strip(),

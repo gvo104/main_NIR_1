@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 
 from nir_stage0.config import LLMConfig
 from nir_stage0.llm_client import (
+    ReasoningBudgetExhaustedError,
     TOOL_NAME,
     create_openai_client,
     run_chat_smoke,
@@ -21,7 +23,7 @@ CONFIG = LLMConfig(
 )
 
 
-def _response(message):
+def _response(message, *, finish_reason="stop"):
     return httpx.Response(
         200,
         json={
@@ -29,7 +31,9 @@ def _response(message):
             "object": "chat.completion",
             "created": 1,
             "model": CONFIG.llm_model,
-            "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
+            "choices": [
+                {"index": 0, "message": message, "finish_reason": finish_reason}
+            ],
             "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
         },
     )
@@ -51,6 +55,7 @@ def test_chat_request_contract():
     assert captured["body"]["model"] == CONFIG.llm_model
     assert captured["body"]["max_tokens"] == 512
     assert captured["body"]["temperature"] == 0.7
+    assert captured["body"]["reasoning_effort"] == "low"
     assert captured["body"]["messages"][0]["role"] == "user"
 
 
@@ -82,3 +87,23 @@ def test_forced_tool_call_contract():
     assert run_tool_smoke(client, CONFIG) == {"answer": "tools work"}
     assert captured["body"]["tool_choice"]["function"]["name"] == TOOL_NAME
     assert captured["body"]["tools"][0]["function"]["name"] == TOOL_NAME
+    assert captured["body"]["reasoning_effort"] == "low"
+
+
+def test_reasoning_only_response_has_distinct_error_category():
+    def handler(request):
+        del request
+        return _response(
+            {
+                "role": "assistant",
+                "content": None,
+                "reasoning_content": "unfinished reasoning",
+            },
+            finish_reason="length",
+        )
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = create_openai_client(CONFIG, http_client=http_client)
+
+    with pytest.raises(ReasoningBudgetExhaustedError, match="reasoning budget"):
+        run_chat_smoke(client, CONFIG)

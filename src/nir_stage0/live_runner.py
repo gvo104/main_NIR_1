@@ -15,7 +15,12 @@ from .aide_policy import (
 )
 from .config import LLMConfig, load_llm_config
 from .docker_executor import DockerExecutor, ExecutorLimits
-from .llm_client import create_openai_client, run_chat_smoke, run_tool_smoke
+from .llm_client import (
+    ReasoningBudgetExhaustedError,
+    create_openai_client,
+    run_chat_smoke,
+    run_tool_smoke,
+)
 
 
 class LiveStageError(RuntimeError):
@@ -37,6 +42,8 @@ def _write_result(path: Path, result: dict[str, Any]) -> None:
 
 
 def _error_category(exc: Exception) -> str:
+    if isinstance(exc, ReasoningBudgetExhaustedError):
+        return "reasoning_budget_exhausted"
     name = type(exc).__name__.lower()
     if "authentication" in name or "permission" in name:
         return "authentication"
@@ -116,7 +123,7 @@ def _run_aide(
         stage.provider = "openai"
         stage.temp = config.temperature
         stage.max_tokens = aide_max_tokens
-        stage.reasoning_effort = None
+        stage.reasoning_effort = config.reasoning_effort
 
     cfg = prep_cfg(cfg)
     task_desc = load_task_desc(cfg)

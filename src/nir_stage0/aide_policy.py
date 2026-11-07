@@ -11,6 +11,8 @@ import aide.agent as aide_agent
 from aide.agent import Agent
 from aide.journal import Node
 
+from .llm_client import ReasoningBudgetExhaustedError
+
 ParentSelector = Callable[[Sequence[Node]], Node]
 USER_MESSAGE_FALLBACK = (
     "Follow the instructions in the system message and return the requested response."
@@ -38,7 +40,14 @@ def ensure_aide_user_message() -> Iterator[None]:
     def query_with_user_message(*args: Any, **kwargs: Any):
         if kwargs.get("user_message") is None:
             kwargs["user_message"] = USER_MESSAGE_FALLBACK
-        return original_query(*args, **kwargs)
+        try:
+            return original_query(*args, **kwargs)
+        except ValueError as exc:
+            if str(exc) == "OpenAI returned no text":
+                raise ReasoningBudgetExhaustedError(
+                    "LLM exhausted its reasoning budget without returning final content"
+                ) from exc
+            raise
 
     aide_agent.query = query_with_user_message
     try:
