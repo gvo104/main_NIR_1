@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from .aide_policy import (
     SelectableParentAgent,
@@ -19,6 +20,12 @@ from .llm_client import create_openai_client, run_chat_smoke, run_tool_smoke
 
 class LiveStageError(RuntimeError):
     pass
+
+
+def _live_experiment_name() -> str:
+    """Avoid reusing a partially prepared AIDE workspace after a failed run."""
+
+    return f"stage0-live-{uuid4().hex[:8]}"
 
 
 def _write_result(path: Path, result: dict[str, Any]) -> None:
@@ -92,7 +99,7 @@ def _run_aide(
     cfg.eval = "Minimize root mean squared error using a fast validation split."
     cfg.log_dir = str(logs_dir)
     cfg.workspace_dir = str(workspaces_dir)
-    cfg.exp_name = "stage0-live"
+    cfg.exp_name = _live_experiment_name()
     cfg.preprocess_data = False
     cfg.copy_data = True
     cfg.generate_report = False

@@ -1,5 +1,14 @@
 from nir_stage0.config import LLMConfig
-from nir_stage0.live_runner import _record_error
+from nir_stage0.live_runner import _live_experiment_name, _record_error
+
+
+def test_live_experiment_names_do_not_reuse_partial_workspace():
+    first = _live_experiment_name()
+    second = _live_experiment_name()
+
+    assert first.startswith("stage0-live-")
+    assert second.startswith("stage0-live-")
+    assert first != second
 
 
 def test_error_record_redacts_endpoint_and_token_and_adds_category():
