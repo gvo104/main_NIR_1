@@ -167,20 +167,24 @@ def _run_aide(
 def run_all_live(
     *,
     env_file: str | Path,
+    settings_file: str | Path | None = None,
     artifact_root: str | Path = "artifacts/stage0/live",
-    aide_max_tokens: int = 4096,
-    image: str = "nir-stage0-executor:latest",
-    timeout: float = 60.0,
+    aide_max_tokens: int | None = None,
+    image: str | None = None,
+    timeout: float | None = None,
 ) -> dict[str, Any]:
-    if aide_max_tokens <= 0:
+    if aide_max_tokens is not None and aide_max_tokens <= 0:
         raise ValueError("aide_max_tokens must be positive")
-    if timeout <= 0:
+    if timeout is not None and timeout <= 0:
         raise ValueError("timeout must be positive")
 
     root = Path(__file__).resolve().parents[2]
     artifacts = (root / artifact_root).resolve()
     result_path = artifacts / "result.json"
-    config = load_llm_config(env_file, repo_root=root)
+    config = load_llm_config(env_file, settings_file, repo_root=root)
+    resolved_aide_max_tokens = aide_max_tokens or config.aide_max_tokens
+    resolved_timeout = timeout or config.request_timeout
+    resolved_image = image or config.executor_image
     result: dict[str, Any] = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "model": config.llm_model,
@@ -188,7 +192,7 @@ def run_all_live(
         "checks": {},
     }
 
-    client = create_openai_client(config, timeout=timeout)
+    client = create_openai_client(config, timeout=resolved_timeout)
     try:
         chat = run_chat_smoke(client, config)
         result["checks"]["chat_completion"] = {
@@ -217,9 +221,9 @@ def run_all_live(
         result["checks"]["aide_two_steps"] = _run_aide(
             config,
             artifacts,
-            aide_max_tokens=aide_max_tokens,
-            image=image,
-            timeout=timeout,
+            aide_max_tokens=resolved_aide_max_tokens,
+            image=resolved_image,
+            timeout=resolved_timeout,
         )
     except Exception as exc:
         _record_error(result, "aide_two_steps", exc, config)

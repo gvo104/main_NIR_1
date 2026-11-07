@@ -13,11 +13,18 @@ def test_live_api_tools_and_two_aide_steps():
     if os.environ.get("RUN_LIVE_LLM") != "1":
         pytest.skip("set RUN_LIVE_LLM=1 and enable VPN for live checks")
 
+    optional = {}
+    if value := os.environ.get("NIR_AIDE_MAX_TOKENS"):
+        optional["aide_max_tokens"] = int(value)
+    if value := os.environ.get("NIR_REQUEST_TIMEOUT"):
+        optional["timeout"] = float(value)
+    if value := os.environ.get("NIR_EXECUTOR_IMAGE"):
+        optional["image"] = value
+
     result = run_all_live(
         env_file=os.environ.get("NIR_ENV_FILE", "../.env"),
-        aide_max_tokens=int(os.environ.get("NIR_AIDE_MAX_TOKENS", "4096")),
-        timeout=float(os.environ.get("NIR_REQUEST_TIMEOUT", "60")),
-        image=os.environ.get("NIR_EXECUTOR_IMAGE", "nir-stage0-executor:latest"),
+        settings_file=os.environ.get("NIR_SETTINGS_FILE", "config/stage0.toml"),
+        **optional,
     )
 
     assert result["checks"]["chat_completion"]["status"] == "PASS"
