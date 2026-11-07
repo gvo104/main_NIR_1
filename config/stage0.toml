@@ -1,0 +1,10 @@
+[llm]
+model = "qwen3.8-27b"
+smoke_max_tokens = 4096
+aide_max_tokens = 32768
+temperature = 0.7
+reasoning_effort = "low"
+
+[runtime]
+request_timeout = 300
+executor_image = "nir-stage0-executor:latest"
