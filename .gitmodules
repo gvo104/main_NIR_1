@@ -1,0 +1,8 @@
+[submodule "third_party/era"]
+	path = third_party/era
+	url = https://github.com/google-research/era.git
+	shallow = true
+[submodule "third_party/aideml"]
+	path = third_party/aideml
+	url = https://github.com/WecoAI/aideml.git
+	shallow = true

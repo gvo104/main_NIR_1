@@ -1,0 +1,22 @@
+from nir_stage0.config import LLMConfig
+from nir_stage0.live_runner import _record_error
+
+
+def test_error_record_redacts_endpoint_and_token_and_adds_category():
+    config = LLMConfig(
+        lite_llm_token="private-token",
+        server_address="https://private.example/v1",
+        llm_model="test-model",
+        max_tokens=512,
+        temperature=0.7,
+    )
+    result = {"checks": {}}
+    error = ValueError(
+        "bad response from https://private.example/v1 using private-token"
+    )
+
+    _record_error(result, "tool_calling", error, config)
+
+    record = result["checks"]["tool_calling"]
+    assert record["category"] == "response_format"
+    assert record["message"] == "bad response from <server> using ***"

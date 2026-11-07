@@ -1,0 +1,6 @@
+*
+!docker/
+!docker/stage0-executor/
+!docker/stage0-executor/Dockerfile
+!requirements/
+!requirements/executor.txt
