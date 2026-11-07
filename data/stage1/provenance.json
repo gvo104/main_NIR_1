@@ -1,0 +1,16 @@
+{
+  "source_commit": "d03574028ece110013c6284d3012ac4bef03ded7",
+  "source_url": "https://raw.githubusercontent.com/cdcepi/FluSight-forecast-hub/d03574028ece110013c6284d3012ac4bef03ded7/target-data/time-series.csv",
+  "source_sha256": "2524463c6b02791b4276054986287e747c8a8f6c99dfe59cf6d23ed67812f98d",
+  "filtered_sha256": "b84c1ec21a1632e18ab0ee381027a0ffa0955afb73ca0357bcb0aaca627a1e3b",
+  "repository_license": "MIT",
+  "repository_license_url": "https://github.com/cdcepi/FluSight-forecast-hub/blob/d03574028ece110013c6284d3012ac4bef03ded7/LICENSE",
+  "target": "wk inc flu hosp",
+  "location": "US",
+  "rows": 16875,
+  "source_matching_rows": 17100,
+  "discarded_identical_duplicates": 225,
+  "vintages": 102,
+  "validation_weeks": 35,
+  "test_weeks": 35
+}
