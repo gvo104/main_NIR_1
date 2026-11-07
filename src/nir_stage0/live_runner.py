@@ -7,7 +7,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .aide_policy import SelectableParentAgent, first_good_node
+from .aide_policy import (
+    SelectableParentAgent,
+    ensure_aide_user_message,
+    first_good_node,
+)
 from .config import LLMConfig, load_llm_config
 from .docker_executor import DockerExecutor, ExecutorLimits
 from .llm_client import create_openai_client, run_chat_smoke, run_tool_smoke
@@ -126,7 +130,7 @@ def _run_aide(
         limits=ExecutorLimits(timeout_seconds=120),
     )
 
-    with config.aide_environment():
+    with config.aide_environment(), ensure_aide_user_message():
         backend_openai._setup_custom_client()
         backend_openai._custom_client = create_openai_client(config, timeout=timeout)
         for _ in range(2):

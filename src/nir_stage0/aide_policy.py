@@ -4,17 +4,47 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable, Sequence
+from contextlib import contextmanager
+from typing import Any, Iterator
 
+import aide.agent as aide_agent
 from aide.agent import Agent
 from aide.journal import Node
 
 ParentSelector = Callable[[Sequence[Node]], Node]
+USER_MESSAGE_FALLBACK = (
+    "Follow the instructions in the system message and return the requested response."
+)
 
 
 def first_good_node(nodes: Sequence[Node]) -> Node:
     if not nodes:
         raise ValueError("cannot select a parent from an empty sequence")
     return nodes[0]
+
+
+@contextmanager
+def ensure_aide_user_message() -> Iterator[None]:
+    """Add a user turn for endpoints that reject system-only AIDE requests.
+
+    AIDE's upstream agent passes its complete prompt as ``system_message`` and
+    leaves ``user_message`` empty for generation and feedback. Hosted vLLM
+    rejects that otherwise valid Chat Completions shape. The adapter is scoped
+    to the local live run and restores AIDE's original query function on exit.
+    """
+
+    original_query = aide_agent.query
+
+    def query_with_user_message(*args: Any, **kwargs: Any):
+        if kwargs.get("user_message") is None:
+            kwargs["user_message"] = USER_MESSAGE_FALLBACK
+        return original_query(*args, **kwargs)
+
+    aide_agent.query = query_with_user_message
+    try:
+        yield
+    finally:
+        aide_agent.query = original_query
 
 
 class SelectableParentAgent(Agent):

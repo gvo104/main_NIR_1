@@ -8,7 +8,11 @@ from aide.interpreter import ExecutionResult
 from aide.journal import Journal, Node
 from aide.utils.metric import MetricValue
 
-from nir_stage0.aide_policy import SelectableParentAgent
+from nir_stage0.aide_policy import (
+    USER_MESSAGE_FALLBACK,
+    SelectableParentAgent,
+    ensure_aide_user_message,
+)
 
 
 def _cfg(*, num_drafts=1, debug_prob=0.0):
@@ -77,6 +81,30 @@ def test_selector_rejects_node_outside_journal():
 
     with pytest.raises(ValueError, match="outside"):
         agent.search_policy()
+
+
+def test_compatibility_adapter_adds_user_message_and_restores_query(monkeypatch):
+    calls = []
+
+    def fake_query(*args, **kwargs):
+        calls.append((args, kwargs))
+        return "ok"
+
+    monkeypatch.setattr(aide.agent, "query", fake_query)
+    original_query = aide.agent.query
+
+    with ensure_aide_user_message():
+        assert (
+            aide.agent.query(
+                system_message="system instruction",
+                user_message=None,
+                model="test-model",
+            )
+            == "ok"
+        )
+
+    assert calls[0][1]["user_message"] == USER_MESSAGE_FALLBACK
+    assert aide.agent.query is original_query
 
 
 def test_two_mocked_steps_preserve_generation_feedback_and_parent_link(monkeypatch):
