@@ -174,6 +174,8 @@ def run_all_live(
 ) -> dict[str, Any]:
     if aide_max_tokens <= 0:
         raise ValueError("aide_max_tokens must be positive")
+    if timeout <= 0:
+        raise ValueError("timeout must be positive")
 
     root = Path(__file__).resolve().parents[2]
     artifacts = (root / artifact_root).resolve()

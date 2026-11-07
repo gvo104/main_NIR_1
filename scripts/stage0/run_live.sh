@@ -6,6 +6,7 @@ cd "$repo_root"
 
 env_file=../.env
 aide_max_tokens=4096
+request_timeout=60
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -15,6 +16,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --aide-max-tokens)
             aide_max_tokens=$2
+            shift 2
+            ;;
+        --request-timeout)
+            request_timeout=$2
             shift 2
             ;;
         *)
@@ -32,10 +37,15 @@ if ! docker image inspect nir-stage0-executor:latest >/dev/null 2>&1; then
     echo "Executor image is missing; run scripts/stage0/run_offline.sh first." >&2
     exit 1
 fi
+if ! [[ "$request_timeout" =~ ^[1-9][0-9]*$ ]]; then
+    echo "--request-timeout must be a positive integer in seconds." >&2
+    exit 2
+fi
 
 RUN_LIVE_LLM=1 \
 NIR_ENV_FILE="$env_file" \
 NIR_AIDE_MAX_TOKENS="$aide_max_tokens" \
+NIR_REQUEST_TIMEOUT="$request_timeout" \
 NIR_EXECUTOR_IMAGE=nir-stage0-executor:latest \
     .venvs/aide/bin/python -m pytest \
     -o addopts='' \

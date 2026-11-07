@@ -1,5 +1,7 @@
+import pytest
+
 from nir_stage0.config import LLMConfig
-from nir_stage0.live_runner import _live_experiment_name, _record_error
+from nir_stage0.live_runner import _live_experiment_name, _record_error, run_all_live
 
 
 def test_live_experiment_names_do_not_reuse_partial_workspace():
@@ -29,3 +31,8 @@ def test_error_record_redacts_endpoint_and_token_and_adds_category():
     record = result["checks"]["tool_calling"]
     assert record["category"] == "response_format"
     assert record["message"] == "bad response from <server> using ***"
+
+
+def test_live_runner_rejects_non_positive_timeout(tmp_path):
+    with pytest.raises(ValueError, match="timeout must be positive"):
+        run_all_live(env_file=tmp_path / "missing.env", timeout=0)

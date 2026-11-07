@@ -45,7 +45,7 @@
 ./scripts/stage0/run_live.sh --env-file ../.env
 ```
 
-Порядок: обычный Chat Completions → forced tool call → два шага AIDE. Для API-smoke используются `max_tokens=512` и `temperature=0.7`; для code/feedback AIDE — 4096 токенов. Результат пишется в `artifacts/stage0/live/result.json`, а журнал, дерево и лучшее решение — в каталог логов AIDE внутри live-артефактов.
+Порядок: обычный Chat Completions → forced tool call → два шага AIDE. Для API-smoke используются `max_tokens=512` и `temperature=0.7`; для code/feedback AIDE — 4096 токенов. По умолчанию timeout одного запроса — 60 секунд; для длинной генерации его можно увеличить, например `--request-timeout 300`. Результат пишется в `artifacts/stage0/live/result.json`, а журнал, дерево и лучшее решение — в каталог логов AIDE внутри live-артефактов.
 
 Для hosted vLLM локальный адаптер добавляет нейтральное user-сообщение к system-only запросам upstream AIDE. Он действует только во время live-прогона и не изменяет код подмодуля.
 
@@ -53,6 +53,7 @@
 
 - Совместимость реального endpoint с chat completion и tool calling подтверждена.
 - Полный цикл AIDE с реальной LLM нужно повторить после user-message compatibility-патча.
+- При `aide_max_tokens=12288` ответ модели не уложился в 60 секунд; live-runner теперь принимает отдельно настраиваемый request timeout.
 - Качество генерации модели не оценивалось: Этап 0 проверяет технический контракт и целостность контура.
 - Host-окружение AIDE намеренно содержит только зависимости управляющего контура; библиотеки исполняемых моделей находятся в Docker-образе.
 - FUTS ещё не интегрирован в AIDE: подтверждена только возможность заменить выбор родителя.
