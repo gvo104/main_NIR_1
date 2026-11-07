@@ -47,7 +47,7 @@ where = ["src"]
 target-version = ["py312"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/stage0"]
+testpaths = ["tests/stage0", "tests/stage1"]
 addopts = "-m 'not live_llm'"
 markers = [
     "docker: requires a working Docker daemon and the stage0 executor image",
